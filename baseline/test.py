@@ -59,8 +59,8 @@ def main():
     else:
         print(f"Warning: Weights not found at {weight_path}. Evaluating with random weights.")
         
-    csv_file = f"test_baseline_{args.target}.csv"
-    test_model(agent, dataset, logging=args.logging, output_file=csv_file)
+    log_dir = "logs" if args.logging else None
+    test_model(agent, dataset, log_dir=log_dir, output_file=csv_file)
 
 if __name__ == '__main__':
     main()

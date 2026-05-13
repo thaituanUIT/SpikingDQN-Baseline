@@ -84,6 +84,12 @@ class Agent():
         
         self.model = ModelWrapper(self.policy_net)
         
+        # v2 Compatibility attributes
+        from v2.backbone.engine import DQNEngine
+        self.engine = DQNEngine(self.model, gamma=self.GAMMA, use_target_net=True)
+        self.engine.target_model = ModelWrapper(self.target_net) # Wrapper for target net too
+        self.loss_fn = criterion
+
         self.optimizer = optim.Adam(self.policy_net.parameters(),lr=1e-6)
         self.memory = ReplayMemory(10000)
         self.steps_done = 0

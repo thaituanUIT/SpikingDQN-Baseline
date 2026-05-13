@@ -1,0 +1,147 @@
+"""Implementation for SNN converted from ANN (ANN-to-SNN)"""
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torchvision.transforms as T
+from backbone.model import (
+    VGG16Backbone, SimpleConvBackbone, ResNetBackbone, FusionBackbone,
+    ViTBackbone, EfficientNetBackbone, MobileNetBackbone
+)
+
+class SQNConverted(nn.Module):
+    def __init__(self, input_dim=(3, 224, 224), output_dim=9, history_dim=90, simulation_time=10, extractor_name='conv', dueling=False):
+        super(SQNConverted, self).__init__()
+        
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+        self.history_dim = history_dim
+        self.simulation_time = simulation_time
+        self.extractor_name = extractor_name
+        self.dueling = dueling
+        self.backbone = None
+        self.is_snn = False # Flag indicating if it has been converted
+        
+        if self.extractor_name == 'vgg16':
+            self.backbone = VGG16Backbone()
+        elif self.extractor_name == 'resnet18':
+            self.backbone = ResNetBackbone(model_name='resnet18')
+        elif self.extractor_name == 'fusion':
+            self.backbone = FusionBackbone(model_name='resnet18')
+        elif self.extractor_name == 'vit':
+            self.backbone = ViTBackbone(model_name='vit_b_16')
+        elif self.extractor_name == 'efficientnet':
+            self.backbone = EfficientNetBackbone(model_name='efficientnet_b0')
+        elif self.extractor_name == 'mobilenet':
+            self.backbone = MobileNetBackbone(model_name='mobilenet_v3_small')
+        else:
+            self.backbone = SimpleConvBackbone(input_channels=self.input_dim[0])
+            
+        self.fc_input_dim = self.backbone.get_output_dim() + self.history_dim
+
+        if self.dueling:
+            from backbone.engine import DuelingHead
+            self.fc = nn.Sequential(
+                nn.Linear(self.fc_input_dim, 128),
+                nn.ReLU(),
+                nn.Linear(128, 256),
+                nn.ReLU(),
+                DuelingHead(256, 128, self.output_dim)
+            )
+        else:
+            self.fc = nn.Sequential(
+                nn.Linear(self.fc_input_dim, 128),
+                nn.ReLU(),
+                nn.Linear(128, 256),
+                nn.ReLU(),
+                nn.Linear(256, self.output_dim)
+            )
+
+    def extract_features(self, state):
+        """Extracts CNN features, bypassing SNN and FC layers."""
+        with torch.no_grad():
+            return self.backbone(state)
+
+    def forward(self, state, history):
+        if not self.is_snn:
+            # Standard ANN Forward pass
+            if state.dim() == 2:
+                features = state
+            else:
+                features = self.backbone(state)
+                
+            x = torch.cat([features, history], dim=1)
+            q_values = self.fc(x)
+            return q_values
+        else:
+            if self.dueling:
+                raise NotImplementedError("Dueling Architecture is not currently supported in the manual ATS SNN conversion loop.")
+            # SNN Forward pass (Integrate and Fire simulation)
+            state_size = state.size(0)
+            device = state.device
+            
+            out_v = torch.zeros(state_size, self.output_dim, device=device)
+            
+            # ATS conversion normally skips VGG/ResNet and only applies to the trained RL head
+            # Or we can treat pre-trained output as a constant current.
+            if self.extractor_name in ['vgg16', 'resnet18', 'fusion', 'vit', 'efficientnet', 'mobilenet']:
+                if state.dim() == 2:
+                    constant_features = state
+                else:
+                    with torch.no_grad():
+                        constant_features = self.backbone(state)
+            
+            mem_conv = {}
+            mem_fc = {}
+            
+            # We assume input is constant current over time
+            for t in range(self.simulation_time):
+                x_in = state
+                
+                if self.extractor_name in ['vgg16', 'resnet18', 'fusion', 'vit', 'efficientnet', 'mobilenet']:
+                    features = constant_features
+                else:
+                    # Manual pass through layers to track membrane potentials
+                    c_idx = 0
+                    for layer in self.backbone.get_layers():
+                        if isinstance(layer, (nn.Conv2d, nn.MaxPool2d, nn.Flatten, nn.Linear)):
+                            x_in = layer(x_in)
+                        elif isinstance(layer, nn.ReLU):
+                            if c_idx not in mem_conv:
+                                mem_conv[c_idx] = torch.zeros_like(x_in)
+                            mem_conv[c_idx] += x_in
+                            spikes = (mem_conv[c_idx] >= 1.0).float()
+                            mem_conv[c_idx] -= spikes
+                            x_in = spikes
+                            c_idx += 1
+                            
+                    features = x_in.reshape(state_size, -1)
+                    
+                x_in = torch.cat([features, history], dim=1)
+                
+                f_idx = 0
+                for layer in self.fc:
+                    if isinstance(layer, nn.Linear):
+                        x_in = layer(x_in)
+                    elif isinstance(layer, nn.ReLU):
+                        if f_idx not in mem_fc:
+                            mem_fc[f_idx] = torch.zeros_like(x_in)
+                        mem_fc[f_idx] += x_in
+                        spikes = (mem_fc[f_idx] >= 1.0).float()
+                        mem_fc[f_idx] -= spikes
+                        x_in = spikes
+                        f_idx += 1
+                
+                out_v += x_in # Last layer is Linear (no ReLU), acts as voltage accumulator
+
+            return out_v / self.simulation_time
+
+    def convert_to_snn(self, dataloader=None):
+        """
+        Locks the network and converts it to an SNN.
+        For rigorous ATS, one would perform Data-Based Normalization here 
+        by finding max activations on the dataloader and rescaling weights. 
+        We just set the flag for this simplified version.
+        """
+        self.is_snn = True
+        self.eval()
+        print("Model converted to SNN mode.")

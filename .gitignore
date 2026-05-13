@@ -1,0 +1,12 @@
+.venv/
+pretrained_model/
+result_dqn/
+VOC2012/
+__pycache__/
+setup.sh
+weights/
+logs/
+eval/
+dataset/
+report/
+renders/

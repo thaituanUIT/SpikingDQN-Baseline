@@ -426,7 +426,8 @@ class Agent():
     def compose_state(self, image, dtype=FloatTensor):
         image_feature = self.get_features(image, dtype)
         image_feature = image_feature.view(1,-1)
-        history_flatten = self.actions_history.view(1,-1).type(dtype)
+        # Ensure all tensors are on the same device
+        history_flatten = self.actions_history.view(1,-1).type(dtype).to(image_feature.device)
         state = torch.cat((image_feature, history_flatten), 1)
         return state
     
@@ -440,7 +441,7 @@ class Agent():
 
     
     def update_history(self, action):
-        action_vector = torch.zeros(9)
+        action_vector = torch.zeros(9).to(self.actions_history.device)
         action_vector[action] = 1
         size_history_vector = len(torch.nonzero(self.actions_history))
         if size_history_vector < 9:

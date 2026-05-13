@@ -51,13 +51,13 @@ def test_model(agent, dataset, log_dir=None, output_file='test_results.csv', ver
                 
             next_img_tensor, next_hist_tensor = agent.feature_extract(image, history, width, height, new_mask)
             
-            img_states.append(img_tensor.numpy()[0])
-            hist_states.append(hist_tensor.numpy()[0])
+            img_states.append(img_tensor.cpu().numpy()[0])
+            hist_states.append(hist_tensor.cpu().numpy()[0])
             actions_list.append(action)
             rewards_list.append(reward)
             dones_list.append(done)
-            next_img_states.append(next_img_tensor.numpy()[0])
-            next_hist_states.append(next_hist_tensor.numpy()[0])
+            next_img_states.append(next_img_tensor.cpu().numpy()[0])
+            next_hist_states.append(next_hist_tensor.cpu().numpy()[0])
                 
             masks.append(new_mask)
             current_mask = new_mask

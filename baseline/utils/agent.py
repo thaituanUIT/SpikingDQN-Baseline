@@ -436,8 +436,10 @@ class Agent():
         return state
     
     def get_features(self, image, dtype=FloatTensor):
-        image = image.view(1,*image.shape)
-        image = Variable(image).type(dtype)
+        if image.dim() == 3:
+            image = image.unsqueeze(0)
+        
+        image = image.type(dtype)
         if self.use_cuda:
             image = image.cuda()
         feature = self.feature_extractor(image)

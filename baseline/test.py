@@ -30,6 +30,7 @@ def main():
     sys_group = parser.add_argument_group('System Parameters')
     sys_group.add_argument('--weights', type=str, default=None, help="Path to specific weights file")
     sys_group.add_argument('--logging', action='store_true', help="Log metrics to CSV")
+    sys_group.add_argument('--logging-dir', type=str, default=None, help="Directory to save logs. If None, uses 'logs' folder.")
     
     args = parser.parse_args()
     
@@ -49,7 +50,7 @@ def main():
     )
     
     # Load weights
-    weight_path = args.weights if args.weights else f"baseline/weights/baseline_{args.target}.pth"
+    weight_path = args.weights if args.weights else f"baseline/weights/baseline_{args.extractor}_{args.target}.pth"
     if os.path.exists(weight_path):
         agent.model.load_state_dict(torch.load(weight_path, map_location=device))
         print(f"Loaded weights from {weight_path}")
@@ -59,9 +60,11 @@ def main():
     else:
         print(f"Warning: Weights not found at {weight_path}. Evaluating with random weights.")
         
-    csv_file = f"test_baseline_{args.target}.csv"
-    log_dir = "logs" if args.logging else None
-    test_model(agent, dataset, log_dir=log_dir, output_file=csv_file)
+    import datetime
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    detailed_name = f"test_baseline_{args.extractor}_{args.target}_step{args.max_steps}_a{args.alpha}_nu{args.nu}_th{args.threshold}_{timestamp}.csv"
+    log_dir = args.logging_dir if args.logging_dir else ("logs" if args.logging else None)
+    test_model(agent, dataset, log_dir=log_dir, output_file=detailed_name)
 
 if __name__ == '__main__':
     main()

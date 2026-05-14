@@ -41,7 +41,7 @@ class Agent():
         self.GAMMA = 0.900
         self.EPS = 1  #epsilon 
         self.TARGET_UPDATE = 1 
-        self.save_path = "./models/q_network"
+        self.save_path = f"./models/q_network_{extractor_name}"
         screen_height, screen_width = 224, 224
         self.n_actions = 9
         self.classe = classe

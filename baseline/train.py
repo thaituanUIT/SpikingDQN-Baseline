@@ -9,6 +9,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from v2.data.voc import VOCDataset
 from baseline.utils.agent import Agent
 from v2.helpers.trainer import run_rl_training
+from v2.helpers.utils import plot_training_results
 
 def main():
     parser = argparse.ArgumentParser(description="Baseline Agent Training with v2 Interface")
@@ -40,6 +41,7 @@ def main():
     
     # Logging and Saving
     log_group = parser.add_argument_group('Logging and Saving')
+    log_group.add_argument('--logging-dir', type=str, default=None, help="Directory to save logs. If None, uses 'logs' folder.")
     log_group.add_argument('--save', type=str, choices=["best", "last", "epoch", "none"], default="last", help="Save model mode")
     
     args = parser.parse_args()
@@ -75,7 +77,7 @@ def main():
     )
     
     os.makedirs('baseline/weights', exist_ok=True)
-    save_path = f"baseline/weights/baseline_{args.target}.pth"
+    save_path = f"baseline/weights/baseline_{args.extractor}_{args.target}_ep{args.epochs}_bs{args.batch_size}_step{args.max_steps}_a{args.alpha}_nu{args.nu}_th{args.threshold}.pth"
     print(f"Starting Baseline RL Loop for target {args.target}...")
     
     losses, epsilons = run_rl_training(
@@ -89,9 +91,20 @@ def main():
         validation_mode=args.validation
     )
     
+    import datetime
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_dir = args.logging_dir if args.logging_dir else "logs"
+    method_name = f"baseline_{args.extractor}_ep{args.epochs}_bs{args.batch_size}_step{args.max_steps}_a{args.alpha}_nu{args.nu}_th{args.threshold}_{timestamp}"
+    plot_training_results(losses, epsilons, method_name, args.target, log_dir=log_dir)
+    
     if args.save == "last":
         torch.save(agent.model.state_dict(), save_path)
         print(f"Final model saved to {save_path}")
+        
+        # Also save a simpler path for easier testing
+        simple_path = f"baseline/weights/baseline_{args.extractor}_{args.target}.pth"
+        torch.save(agent.model.state_dict(), simple_path)
+        print(f"Convenience copy saved to {simple_path}")
     elif args.save == "best":
         print(f"Best model was saved to {save_path}")
     elif args.save == "epoch":

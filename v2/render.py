@@ -24,6 +24,7 @@ def main():
     core_group.add_argument('--target', type=str, default='mixing')
     core_group.add_argument('--image-path', type=str, default=None, help="Path to specific image file")
     core_group.add_argument('--num-images', type=int, default=5, help="Number of images if no path provided")
+    core_group.add_argument('--seed', type=int, default=42, help="Seed for consistent data shuffling")
     
     # Agent Parameters
     agent_group = parser.add_argument_group('Agent Parameters')
@@ -59,7 +60,7 @@ def main():
             'filename': os.path.basename(args.image_path)
         }]
     else:
-        dataset = TFDSVOC2007TestDataset(target_class=args.target, num_samples=args.num_images)
+        dataset = TFDSVOC2007TestDataset(target_class=args.target, num_samples=args.num_images, seed=args.seed)
         samples = [dataset[i] for i in range(len(dataset))]
     
     history_dim = 9 * args.replay

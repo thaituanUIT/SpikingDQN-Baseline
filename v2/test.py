@@ -20,6 +20,7 @@ def main():
     core_group.add_argument('--target', type=str, default='mixing')
     core_group.add_argument('--num-samples', type=int, default=10, help="Test on 10 samples by default")
     core_group.add_argument('--voc-dir', type=str, default=None, help="Override default VOC2012 directory")
+    core_group.add_argument('--seed', type=int, default=42, help="Seed for consistent data shuffling")
     
     # Agent Parameters
     agent_group = parser.add_argument_group('Agent Parameters')
@@ -38,7 +39,7 @@ def main():
     
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
-    dataset = TFDSVOC2007TestDataset(target_class=args.target, num_samples=args.num_samples)
+    dataset = TFDSVOC2007TestDataset(target_class=args.target, num_samples=args.num_samples, seed=args.seed)
     
     history_dim = 9 * args.replay
     if args.method == 'surrogate':

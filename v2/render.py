@@ -1,8 +1,12 @@
 import argparse
 import torch
 import os
+import sys
 import numpy as np
 import cv2
+
+# Ensure imports work by adding the root directory to sys.path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from v2.data.voc_tfds import TFDSVOC2007TestDataset
 from v2.agents.localization_agent import LocalizationAgent

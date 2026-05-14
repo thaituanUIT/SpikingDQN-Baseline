@@ -142,32 +142,14 @@ def get_backbone(name, pretrained=True, freeze=True):
 class DQN(nn.Module):
     def __init__(self, input_dim, outputs=9):
         super(DQN, self).__init__()
-        self.fc_input_dim = input_dim
-        self.fc = nn.Sequential(
-            nn.Linear(self.fc_input_dim, 5096),
-            nn.ReLU(inplace=True),
+        self.classifier = nn.Sequential(
+            nn.Linear(in_features=input_dim, out_features=1024),            
+            nn.ReLU(),
             nn.Dropout(0.2),
-            
-            nn.Linear(5096, 2048),
-            nn.ReLU(inplace=True),
+            nn.Linear(in_features=1024, out_features=1024),
+            nn.ReLU(),
             nn.Dropout(0.2),
-            
-            nn.Linear(2048, 1024),
-            nn.ReLU(inplace=True),
-            nn.Dropout(0.2),
-            
-            nn.Linear(1024, 512),
-            nn.ReLU(inplace=True),
-            nn.Dropout(0.2),
-            
-            nn.Linear(512, 128),
-            nn.ReLU(inplace=True),
-            nn.Dropout(0.1),
-            
-            nn.Linear(128, 64),
-            nn.ReLU(inplace=True),
-            nn.Linear(64, outputs)
+            nn.Linear(in_features=1024, out_features=outputs)
         )
-
     def forward(self, x):
-        return self.fc(x)
+        return self.classifier(x)

@@ -94,7 +94,7 @@ def main():
     import datetime
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     log_dir = args.logging_dir if args.logging_dir else "logs"
-    method_name = f"baseline_{args.extractor}_ep{args.epochs}_bs{args.batch_size}_step{args.max_steps}_a{args.alpha}_nu{args.nu}_th{args.threshold}_{timestamp}"
+    method_name = f"train_baseline_{args.extractor}_ep{args.epochs}_bs{args.batch_size}_step{args.max_steps}_a{args.alpha}_nu{args.nu}_th{args.threshold}_{timestamp}"
     plot_training_results(losses, epsilons, method_name, args.target, log_dir=log_dir)
     
     if args.save == "last":
